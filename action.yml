@@ -1,0 +1,93 @@
+name: "reviewdog-suggester: Suggest any code changes based on diff with reviewdog"
+description: "\U0001F436 Suggest any code changes based on diff through GitHub Multi-line code suggestions"
+author: "haya14busa"
+inputs:
+  github_token:
+    description: "GITHUB_TOKEN"
+    default: "${{ github.token }}"
+    required: true
+  path:
+    description: "The directory in which reviewdog should run"
+    default: "."
+    required: false
+  ### Flags for reviewdog ###
+  tool_name:
+    description: "Tool name to use for reviewdog reporter"
+    default: "reviewdog-suggester"
+    required: false
+  level:
+    description: "Report level for reviewdog [info,warning,error]"
+    default: "warning"
+    required: false
+  filter_mode:
+    description: |
+      Filtering mode for the reviewdog command [added,diff_context,file,nofilter].
+      Default is diff_context. GitHub suggestions only support added and diff_context.
+    default: "diff_context"
+    required: false
+  fail_level:
+    description: |
+      Exit code 1 for reviewdog if it finds at least 1 issue with severity greater than or equal to given level [any,info,warning,error].
+      If set to `none`, always exit with 0.
+      Default is `none`.
+    default: "none"
+    required: false
+  fail_on_error:
+    description: |
+      Exit code for reviewdog when errors are found [true,false]
+      Default is `false`.
+    deprecationMessage: Deprecated, use `fail_level` instead.
+    default: "false"
+    required: false
+  reviewdog_flags:
+    description: "Additional reviewdog flags"
+    default: ""
+    required: false
+  ### Flags for reviewdog suggester ###
+  cleanup:
+    description: "Clean up non-committed changes after the action"
+    default: "true"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1.5.0
+      with:
+        reviewdog_version: v0.21.0
+    - run: |
+        set -euo pipefail
+        . "$GITHUB_ACTION_PATH/script.sh"
+      shell: bash
+      env:
+        # INPUT_<VARIABLE_NAME> is not available in Composite run steps
+        # https://github.community/t/input-variable-name-is-not-available-in-composite-run-steps/127611
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_TOOL_NAME: ${{ inputs.tool_name }}
+        INPUT_LEVEL: ${{ inputs.level }}
+        INPUT_FILTER_MODE: ${{ inputs.filter_mode }}
+        INPUT_FAIL_LEVEL: ${{ inputs.fail_level }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+        INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}
+        INPUT_CLEANUP: ${{ inputs.cleanup }}
+      working-directory: ${{ inputs.path }}
+# Ref: https://haya14busa.github.io/github-action-brandings/
+branding:
+  icon: "edit"
+  color: "red"
