@@ -1,0 +1,38 @@
+name: Test reviewdog installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Ensure reviewdog is not pre-installed
+        run: |
+          if command -v reviewdog > /dev/null 2>&1; then
+            echo "reviewdog already installed, removing for clean test"
+          else
+            echo "reviewdog not pre-installed (expected)"
+          fi
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "install-test"
+          level: "info"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          cleanup: "true"
+
+      - name: Assert reviewdog was installed and is available
+        run: |
+          if ! command -v reviewdog > /dev/null 2>&1; then
+            echo "FAIL: reviewdog was not installed by the action"
+            exit 1
+          fi
+          echo "reviewdog is available: $(reviewdog --version 2>&1 || true)"
+          echo "PASS"

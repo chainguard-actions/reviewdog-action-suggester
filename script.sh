@@ -12,12 +12,12 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
-# Safely split INPUT_REVIEWDOG_FLAGS into an array to avoid shell metacharacter
-# injection from user-controlled input. Using a bash array prevents the shell
-# from interpreting metacharacters (;, |, &, $(...), etc.) in the flag values.
-REVIEWDOG_FLAGS=()
+# Split INPUT_REVIEWDOG_FLAGS into an array using read -ra to avoid unquoted
+# expansion that would allow shell metacharacters (;, |, &, $(...)) to be
+# interpreted as shell commands.
+reviewdog_flags_args=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  IFS=' ' read -r -a REVIEWDOG_FLAGS <<< "${INPUT_REVIEWDOG_FLAGS}"
+  IFS=' ' read -ra reviewdog_flags_args <<<"${INPUT_REVIEWDOG_FLAGS}"
 fi
 
 reviewdog \
@@ -29,8 +29,7 @@ reviewdog \
   -fail-level="${INPUT_FAIL_LEVEL}" \
   -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
   -level="${INPUT_LEVEL}" \
-  "${REVIEWDOG_FLAGS[@]+"${REVIEWDOG_FLAGS[@]}"}" \
-  <"${TMPFILE}"
+  "${reviewdog_flags_args[@]}" <"${TMPFILE}"
 
 EXIT_CODE=$?
 

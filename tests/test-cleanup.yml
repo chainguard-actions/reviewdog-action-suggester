@@ -1,0 +1,60 @@
+name: Test cleanup behavior
+on:
+  workflow_dispatch:
+jobs:
+  test-cleanup-true:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify clean working tree
+        run: |
+          git diff --exit-code
+          echo "Working tree is clean before action"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "cleanup-test"
+          level: "warning"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          cleanup: "true"
+
+      - name: Assert working tree is still clean after cleanup=true
+        run: |
+          git diff --exit-code
+          echo "Working tree is clean after action with cleanup=true"
+          echo "PASS"
+
+  test-cleanup-false:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify clean working tree
+        run: |
+          git diff --exit-code
+          echo "Working tree is clean before action"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "cleanup-false-test"
+          level: "warning"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          cleanup: "false"
+
+      - name: Assert action completed with cleanup=false
+        run: |
+          echo "Action completed with cleanup=false"
+          echo "PASS"

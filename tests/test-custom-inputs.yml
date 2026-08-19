@@ -1,0 +1,28 @@
+name: Test custom inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "my-custom-tool"
+          level: "error"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          fail_on_error: "false"
+          reviewdog_flags: ""
+          cleanup: "true"
+
+      - name: Assert action completed with custom inputs
+        run: |
+          echo "Action completed with custom tool_name, level=error, filter_mode=nofilter"
+          echo "PASS"

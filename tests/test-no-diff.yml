@@ -1,0 +1,87 @@
+name: Test action with no uncommitted changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fake reviewdog install script
+        run: |
+          cat > /tmp/fake-install-reviewdog.sh << 'EOF'
+          #!/bin/sh
+          BINDIR=""
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              -b) BINDIR="$2"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
+          if [ -z "$BINDIR" ]; then
+            BINDIR="/usr/local/bin"
+          fi
+          mkdir -p "$BINDIR"
+          cat > "$BINDIR/reviewdog" << 'RDEOF'
+          #!/bin/sh
+          if [ "$1" = "-h" ]; then
+            echo "reviewdog (stub)"
+            exit 0
+          fi
+          # Simulate no-diff scenario: read stdin (the diff), if empty just exit 0
+          echo "reviewdog stub: running with args: $*" >&2
+          exit 0
+          RDEOF
+          chmod +x "$BINDIR/reviewdog"
+          echo "Fake reviewdog installed to $BINDIR/reviewdog"
+          EOF
+          chmod +x /tmp/fake-install-reviewdog.sh
+
+      - name: Create fake curl that serves the fake install script
+        run: |
+          mkdir -p /tmp/fake-bin
+          cat > /tmp/fake-bin/curl << 'EOF'
+          #!/bin/sh
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *reviewdog*|*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install-reviewdog.sh > "$out"
+              else
+                cat /tmp/fake-install-reviewdog.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          EOF
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - name: Ensure working tree is clean
+        run: |
+          git status
+          # Make sure there are no uncommitted changes
+          git diff --exit-code || (echo "Working tree has changes, cleaning up" && git checkout -- .)
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: action completed with no diff scenario"

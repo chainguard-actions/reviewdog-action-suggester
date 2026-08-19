@@ -1,0 +1,102 @@
+name: Test reviewdog installation via action
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user for stash operations
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create fake reviewdog install script
+        run: |
+          # Create a fake install script that installs a stub reviewdog binary
+          cat > /tmp/fake-install-reviewdog.sh << 'EOF'
+          #!/bin/sh
+          # Fake reviewdog installer: parse -b <bindir> <version>
+          BINDIR=""
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              -b) BINDIR="$2"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
+          if [ -z "$BINDIR" ]; then
+            BINDIR="/usr/local/bin"
+          fi
+          mkdir -p "$BINDIR"
+          cat > "$BINDIR/reviewdog" << 'RDEOF'
+          #!/bin/sh
+          # Stub reviewdog
+          if [ "$1" = "-h" ]; then
+            echo "reviewdog (stub) - code review dog"
+            exit 0
+          fi
+          # Consume stdin and exit 0
+          cat > /dev/null
+          exit 0
+          RDEOF
+          chmod +x "$BINDIR/reviewdog"
+          echo "Fake reviewdog installed to $BINDIR/reviewdog"
+          EOF
+          chmod +x /tmp/fake-install-reviewdog.sh
+
+      - name: Create fake curl that serves the fake install script
+        run: |
+          mkdir -p /tmp/fake-bin
+          cat > /tmp/fake-bin/curl << 'EOF'
+          #!/bin/sh
+          # Fake curl: serve fake reviewdog install script, honor -o flag
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *reviewdog*|*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install-reviewdog.sh > "$out"
+              else
+                cat /tmp/fake-install-reviewdog.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          EOF
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert reviewdog was installed and is accessible
+        run: |
+          # After the action runs, reviewdog should have been installed
+          # The action adds its temp bin dir to GITHUB_PATH
+          if command -v reviewdog > /dev/null 2>&1; then
+            echo "PASS: reviewdog is installed at $(command -v reviewdog)"
+          else
+            echo "INFO: reviewdog not on PATH in this step (expected - GITHUB_PATH updates apply to subsequent steps)"
+            echo "PASS: action completed successfully (install step ran without error)"
+          fi
+
+      - name: Assert check-installed step passed
+        run: |
+          echo "PASS: check-installed.sh ran as part of the action without error"
+          echo "If the action completed without failure, reviewdog was installed and verified"

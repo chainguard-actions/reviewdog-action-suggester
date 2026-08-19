@@ -23,22 +23,21 @@ mkdir -p "${TEMP}/reviewdog/bin"
 
 echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
 
-INSTALLER_TMP="$(mktemp)"
-
+# Download the install script to a file first, then execute it (avoid piping remote content to sh)
+INSTALL_SCRIPT_FILE="${TEMP}/reviewdog_install.sh"
 if command -v curl 2>&1 >/dev/null; then
-  curl -sfL "${INSTALL_SCRIPT}" -o "${INSTALLER_TMP}"
+  curl -sfL "${INSTALL_SCRIPT}" -o "${INSTALL_SCRIPT_FILE}"
 elif command -v wget 2>&1 >/dev/null; then
-  wget -O "${INSTALLER_TMP}" "${INSTALL_SCRIPT}"
+  wget -O "${INSTALL_SCRIPT_FILE}" "${INSTALL_SCRIPT}"
 else
   echo "curl or wget is required" >&2
-  rm -f "${INSTALLER_TMP}"
   exit 1
 fi
-
-sh "${INSTALLER_TMP}" -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1
-
-rm -f "${INSTALLER_TMP}"
+sh "${INSTALL_SCRIPT_FILE}" -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1
+rm -f "${INSTALL_SCRIPT_FILE}"
 
 echo '::endgroup::'
 
-echo "${TEMP}/reviewdog/bin" >>"${GITHUB_PATH}"
+# Sanitize TEMP before writing to GITHUB_PATH to prevent newline injection
+SAFE_BIN_PATH="$(printf '%s' "${TEMP}/reviewdog/bin" | tr -d '\n\r')"
+echo "${SAFE_BIN_PATH}" >>"${GITHUB_PATH}"

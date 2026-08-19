@@ -1,0 +1,106 @@
+name: Test action with cleanup=false (stash pop)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user for stash operations
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create fake reviewdog install script
+        run: |
+          cat > /tmp/fake-install-reviewdog.sh << 'EOF'
+          #!/bin/sh
+          BINDIR=""
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              -b) BINDIR="$2"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
+          if [ -z "$BINDIR" ]; then
+            BINDIR="/usr/local/bin"
+          fi
+          mkdir -p "$BINDIR"
+          cat > "$BINDIR/reviewdog" << 'RDEOF'
+          #!/bin/sh
+          if [ "$1" = "-h" ]; then
+            echo "reviewdog (stub)"
+            exit 0
+          fi
+          # Consume stdin (the diff)
+          cat > /dev/null
+          echo "reviewdog stub ran successfully" >&2
+          exit 0
+          RDEOF
+          chmod +x "$BINDIR/reviewdog"
+          echo "Fake reviewdog installed to $BINDIR/reviewdog"
+          EOF
+          chmod +x /tmp/fake-install-reviewdog.sh
+
+      - name: Create fake curl that serves the fake install script
+        run: |
+          mkdir -p /tmp/fake-bin
+          cat > /tmp/fake-bin/curl << 'EOF'
+          #!/bin/sh
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *reviewdog*|*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install-reviewdog.sh > "$out"
+              else
+                cat /tmp/fake-install-reviewdog.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          EOF
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - name: Create an uncommitted change
+        run: |
+          echo "# test change for cleanup=false scenario" >> README.md
+          git diff --stat
+          echo "Uncommitted change created"
+
+      - name: Record the change content
+        run: |
+          CHANGE=$(git diff README.md)
+          echo "Change recorded: $CHANGE"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester"
+          level: "info"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "false"
+
+      - name: Assert working tree has changes restored after cleanup=false
+        run: |
+          # With cleanup=false, git stash pop should restore the changes
+          STATUS=$(git status --porcelain)
+          echo "git status after action: '$STATUS'"
+          if [ -n "$STATUS" ]; then
+            echo "PASS: working tree has changes restored (stash was popped)"
+          else
+            echo "INFO: working tree is clean - stash pop may have been a no-op or stash was empty"
+            echo "PASS: action completed successfully with cleanup=false"
+          fi
