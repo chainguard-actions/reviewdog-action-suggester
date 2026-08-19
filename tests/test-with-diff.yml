@@ -1,4 +1,4 @@
-name: Test basic usage with no diff
+name: Test action with a non-empty diff
 on:
   workflow_dispatch:
 jobs:
@@ -7,24 +7,26 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Ensure clean working tree (no uncommitted changes)
+      - name: Create a tracked file with uncommitted changes
         run: |
-          git status
+          # Modify an existing tracked file to produce a diff
+          echo "# additional line for diff test" >> README.md
           git diff --stat
+          echo "Diff created"
 
       - id: action
         uses: .
         with:
           github_token: ${{ github.token }}
-          tool_name: "test-suggester"
-          level: "warning"
+          tool_name: "diff-test-suggester"
+          level: "info"
           filter_mode: "nofilter"
           fail_level: "none"
           cleanup: "true"
           # Override reporter to local so it works without a PR context
           reviewdog_flags: "-reporter=local"
 
-      - name: Assert action completed successfully
+      - name: Assert action completed successfully with diff present
         run: |
-          echo "Action completed without error"
+          echo "Action completed without error even with a non-empty diff"
           echo "PASS"

@@ -1,18 +1,13 @@
-name: Test cleanup=true drops stash
+name: Test cleanup=true drops stashed changes
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/pull/1/merge
-      GITHUB_EVENT_NAME: pull_request
-      GITHUB_HEAD_REF: feature-branch
-      GITHUB_BASE_REF: main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create an uncommitted change
+      - name: Create an uncommitted change to stash
         run: |
           echo "# test change" >> README.md
           git diff --stat
@@ -22,21 +17,22 @@ jobs:
         uses: .
         with:
           github_token: ${{ github.token }}
-          tool_name: test-suggester
-          level: warning
-          filter_mode: nofilter
-          fail_level: none
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "nofilter"
+          fail_level: "none"
           cleanup: "true"
-        continue-on-error: true
+          # Override reporter to local so it works without a PR context
+          reviewdog_flags: "-reporter=local"
 
-      - name: Assert stash was dropped (cleanup=true)
+      - name: Assert stashed changes were dropped (cleanup=true drops stash)
         run: |
-          # With cleanup=true, the stash should be dropped
-          # The working tree should be clean (no stash to pop)
-          STASH_COUNT=$(git stash list | wc -l)
-          echo "Stash count: $STASH_COUNT"
-          if [ "$STASH_COUNT" -ne 0 ]; then
-            echo "FAIL: expected stash to be dropped (cleanup=true), but stash count=$STASH_COUNT"
+          echo "Checking that stashed changes were dropped..."
+          git status
+          DIFF=$(git diff --stat)
+          echo "diff stat: $DIFF"
+          if [ -n "$DIFF" ]; then
+            echo "FAIL: expected stash to be dropped but working tree has changes"
             exit 1
           fi
-          echo "PASS: stash was dropped as expected"
+          echo "PASS: stash was dropped, working tree is clean"

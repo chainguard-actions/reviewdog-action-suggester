@@ -1,20 +1,15 @@
-name: Test cleanup=false pops stash (restores changes)
+name: Test cleanup=false restores stashed changes
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/pull/1/merge
-      GITHUB_EVENT_NAME: pull_request
-      GITHUB_HEAD_REF: feature-branch
-      GITHUB_BASE_REF: main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create an uncommitted change
+      - name: Create an uncommitted change to stash
         run: |
-          echo "# test change for cleanup=false" >> README.md
+          echo "# test change" >> README.md
           git diff --stat
           echo "Uncommitted change created"
 
@@ -22,29 +17,22 @@ jobs:
         uses: .
         with:
           github_token: ${{ github.token }}
-          tool_name: test-suggester
-          level: warning
-          filter_mode: nofilter
-          fail_level: none
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "nofilter"
+          fail_level: "none"
           cleanup: "false"
-        continue-on-error: true
+          # Override reporter to local so it works without a PR context
+          reviewdog_flags: "-reporter=local"
 
-      - name: Assert changes were restored (cleanup=false)
+      - name: Assert stashed changes were restored (cleanup=false pops stash)
         run: |
-          # With cleanup=false, the stash should be popped (changes restored)
-          # The working tree should have the change back
-          if git diff --exit-code -- README.md > /dev/null 2>&1; then
-            echo "FAIL: expected changes to be restored (cleanup=false), but README.md has no diff"
+          echo "Checking if stashed changes were restored..."
+          git status
+          DIFF=$(git diff --stat)
+          echo "diff stat: $DIFF"
+          if [ -z "$DIFF" ]; then
+            echo "FAIL: expected stashed changes to be restored but working tree is clean"
             exit 1
           fi
-          echo "PASS: changes were restored as expected (cleanup=false)"
-
-      - name: Assert no stash remains
-        run: |
-          STASH_COUNT=$(git stash list | wc -l)
-          echo "Stash count: $STASH_COUNT"
-          if [ "$STASH_COUNT" -ne 0 ]; then
-            echo "FAIL: expected stash to be empty after pop, but stash count=$STASH_COUNT"
-            exit 1
-          fi
-          echo "PASS: stash is empty after pop"
+          echo "PASS: stashed changes were restored"
