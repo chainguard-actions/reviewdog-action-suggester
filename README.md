@@ -8,6 +8,8 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v1 | [`v1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) |
+| v1.22 | [`v1.22`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) |
 | v1.22.0 | [`v1.22.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22.0) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) |
 | v1.23.1 | [`v1.23.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.23.1) | [`130e59f`](https://github.com/reviewdog/action-suggester/commit/130e59f2fa3ec43a448d2c3d3a6fdc66883c6ebc) |
 | v1.24.0 | [`v1.24.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24.0) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) |
