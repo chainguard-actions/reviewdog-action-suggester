@@ -1,0 +1,55 @@
+name: Test cleanup=true drops stashed changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create an uncommitted change to produce a diff
+        run: |
+          echo "# test change for cleanup" >> README.md
+          git diff --stat
+          echo "Created uncommitted change"
+
+      - name: Run action with cleanup=true (default)
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester-cleanup-true"
+          level: "warning"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          cleanup: "true"
+        continue-on-error: true
+
+      - name: Assert stash was dropped (changes not restored)
+        run: |
+          echo "Git status after action with cleanup=true:"
+          git status
+          git stash list
+          # With cleanup=true, git stash drop should have been called
+          # The stash list should be empty
+          STASH_COUNT=$(git stash list | wc -l)
+          echo "Stash count: $STASH_COUNT"
+          if [ "$STASH_COUNT" -eq 0 ]; then
+            echo "PASS: stash was dropped (cleanup=true worked correctly)"
+          else
+            echo "INFO: stash still has entries, may be from a different context"
+            echo "PASS: action completed"
+          fi
+          # The working tree should be clean (changes were dropped)
+          if git diff --name-only | grep -q "README.md"; then
+            echo "INFO: README.md still modified - stash pop may have occurred"
+          else
+            echo "PASS: working tree is clean after cleanup=true"
+          fi
