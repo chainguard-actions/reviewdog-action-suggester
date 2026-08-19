@@ -1,0 +1,52 @@
+name: Test path input - run in subdirectory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user for stash operations
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Set up fake curl on PATH
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - name: Create a subdirectory for path input test
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/subdir"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          path: "subdir"
+          tool_name: "path-test-suggester"
+          level: "warning"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert action completed successfully with path input
+        run: |
+          # The action should complete successfully when path input is provided
+          # script.sh cd's to GITHUB_WORKSPACE so reviewdog runs from workspace root
+          if [ ! -f /tmp/reviewdog-args.txt ]; then
+            echo "FAIL: reviewdog was not called (args file not found)"
+            exit 1
+          fi
+          ARGS=$(cat /tmp/reviewdog-args.txt)
+          echo "reviewdog args: $ARGS"
+          if ! echo "$ARGS" | grep -q "path-test-suggester"; then
+            echo "FAIL: expected tool_name 'path-test-suggester' in reviewdog args"
+            exit 1
+          fi
+          echo "PASS: action completed successfully with path input"

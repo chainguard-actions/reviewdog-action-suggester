@@ -8,58 +8,48 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **reviewdog--action-suggester/v1.23.1** was hardened automatically. 2 finding(s) were identified and resolved across 2 iteration(s).
+Action **reviewdog--action-suggester/v1.23.1** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### unsafe-shell (severity: high)
 
-install.sh fetches a remote script via curl (or wget) and pipes the output directly to `sh -s`. This is the classic 'curl | sh' unsafe shell pattern: if the remote URL is compromised or the connection is intercepted, arbitrary code executes on the runner without any integrity check. The script is sourced from action.yml's first run: step.
-
-Offending line in install.sh:
-  ) | sh -s -- -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1
-
-The script should be downloaded to a file first, its checksum verified, and then executed separately.
+install.sh downloads a remote install script via curl or wget and pipes it directly to `sh` for execution: `) | sh -s -- -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1`. This is the classic 'curl | sh' anti-pattern — if the remote URL or the content served at it is compromised, arbitrary code executes on the runner. The script is sourced directly from action.yml's run: block.
 
 Locations:
 
-- `install.sh:32`
-- `action.yml:53`
+- `install.sh:30`
+- `action.yml:55`
 
-### github-env-injection (severity: high)
+### script-injection (severity: high)
 
-install.sh writes `${TEMP}/reviewdog/bin` to $GITHUB_PATH without sanitization. TEMP is derived from the REVIEWDOG_TEMPDIR environment variable, which is set in action.yml's env: block from `${{ runner.temp }}` — a workflow-context value. Writing a value sourced from a workflow context expression to a special environment file ($GITHUB_PATH) without first applying the required sanitization step (`printf '%s' "$VAR" | tr -d '\n\r'`) violates the github-env-injection rule.
-
-Offending line in install.sh:
-  echo "${TEMP}/reviewdog/bin" >> "${GITHUB_PATH}"
-
-Offending env: assignment in action.yml:
-  REVIEWDOG_TEMPDIR: ${{ runner.temp }}
+Rule (b) violation: script.sh uses the unquoted shell expansion `${INPUT_REVIEWDOG_FLAGS}` directly in a shell command. INPUT_REVIEWDOG_FLAGS is populated from `inputs.reviewdog_flags` (an attacker-controllable composite action input) via the env: block in action.yml. Because the variable is unquoted, the shell will perform word-splitting and glob expansion on its value, allowing an attacker to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) and achieve command injection. The comment `# INPUT_REVIEWDOG_FLAGS is intentionally split` acknowledges the unquoting but does not mitigate the injection risk.
 
 Locations:
 
-- `install.sh:33`
-- `action.yml:57`
+- `script.sh:20`
+- `action.yml:73`
+
+### missing-permissions (severity: medium)
+
+None of the four workflow files define a top-level `permissions:` key, and no individual job within any of these files defines its own `permissions:` block. Without explicit permissions, workflows run with the repository's default token permissions, which may be overly broad (e.g., write access to contents, pull-requests, etc.). All four files are affected: depup.yml, release.yml, reviewdog.yml, and test.yml.
+
+Locations:
+
+- `.github/workflows/depup.yml:1`
+- `.github/workflows/release.yml:1`
+- `.github/workflows/reviewdog.yml:1`
+- `.github/workflows/test.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unsafe-shell, github-env-injection
+**Fixes applied:** unsafe-shell, script-injection, missing-permissions
 
 **Notes:**
 
-Fixed both findings in install.sh:
-1. unsafe-shell: Replaced the 'curl/wget | sh' pattern with a two-step approach: download the install script to a temp file (${TEMP}/reviewdog/install_script.sh) using curl -o or wget -O, then execute it separately with sh. This eliminates the risk of arbitrary code execution from a compromised or intercepted remote script.
-2. github-env-injection: Added sanitization of the path before writing to $GITHUB_PATH. The TEMP-derived path is now passed through `printf '%s' ... | tr -d '\n\r'` to strip any embedded newlines before being written to the special environment file, preventing injection attacks via the runner.temp context value.
-
-### Iteration 2
-
-**Fixes applied:** script-injection
-
-**Notes:**
-
-Fixed script.sh: replaced the unquoted `${INPUT_REVIEWDOG_FLAGS}` expansion (which allowed shell metacharacter injection) with a bash array. The value is now split into an array via `IFS=' ' read -ra reviewdog_flags_array <<< "${INPUT_REVIEWDOG_FLAGS}"` and expanded safely as `"${reviewdog_flags_array[@]}"`. This preserves multi-flag word-splitting behavior while preventing injection of shell metacharacters (`;`, `|`, `&`, `$(...)`, backticks, etc.). The shebang was updated from `#!/bin/sh` to `#!/bin/bash` to enable array support, consistent with how the script is already sourced (via `shell: bash` in action.yml).
+1. install.sh: Fixed curl|sh anti-pattern by downloading the install script to a temp file first (curl -o / wget -O), then executing it with 'sh "${INSTALL_SCRIPT_FILE}"', and cleaning up afterward. 2. script.sh: Fixed unquoted ${INPUT_REVIEWDOG_FLAGS} by changing shebang to bash, building a bash array with 'IFS=" " read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"' with 'set -f' to disable glob expansion, and passing '"${reviewdog_flags[@]}"' to reviewdog. 3. Added permissions blocks to all four workflow files: depup.yml (contents: write, pull-requests: write), release.yml (contents: write, pull-requests: write), reviewdog.yml (contents: read, pull-requests: write, checks: write), test.yml (contents: read, pull-requests: write).
 

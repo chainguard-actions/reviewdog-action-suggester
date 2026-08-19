@@ -1,0 +1,50 @@
+name: Test no-diff scenario - action runs with no uncommitted changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git identity
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Verify working tree is clean before action runs
+        run: |
+          DIFF=$(git diff)
+          if [ -n "$DIFF" ]; then
+            echo "WARN: unexpected diff found, resetting"
+            git checkout -- .
+          fi
+          echo "PASS: working tree is clean"
+
+      - id: action
+        uses: .
+        with:
+          github_token: "fake-token-no-diff"
+          level: "info"
+          filter_mode: "nofilter"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert action completed with no diff
+        run: |
+          echo "PASS: action completed successfully with empty diff"
+
+      - name: Verify working tree is still clean after action
+        run: |
+          git status
+          DIFF=$(git diff)
+          if [ -n "$DIFF" ]; then
+            echo "FAIL: working tree has unexpected changes after action"
+            echo "$DIFF"
+            exit 1
+          fi
+          echo "PASS: working tree remains clean after action"

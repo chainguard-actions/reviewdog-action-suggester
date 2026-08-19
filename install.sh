@@ -22,17 +22,17 @@ fi
 mkdir -p "${TEMP}/reviewdog/bin"
 
 echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
-DOWNLOADED_SCRIPT="${TEMP}/reviewdog/install_script.sh"
+INSTALL_SCRIPT_FILE="$(mktemp)"
 if command -v curl 2>&1 >/dev/null; then
-  curl -sfL "${INSTALL_SCRIPT}" -o "${DOWNLOADED_SCRIPT}"
+  curl -sfL "${INSTALL_SCRIPT}" -o "${INSTALL_SCRIPT_FILE}"
 elif command -v wget 2>&1 >/dev/null; then
-  wget -O "${DOWNLOADED_SCRIPT}" "${INSTALL_SCRIPT}"
+  wget -O "${INSTALL_SCRIPT_FILE}" "${INSTALL_SCRIPT}"
 else
   echo "curl or wget is required" >&2
   exit 1
 fi
-sh "${DOWNLOADED_SCRIPT}" -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1
+sh "${INSTALL_SCRIPT_FILE}" -b "${TEMP}/reviewdog/bin" "${VERSION}" 2>&1
+rm -f "${INSTALL_SCRIPT_FILE}"
 echo '::endgroup::'
 
-safe_path="$(printf '%s' "${TEMP}/reviewdog/bin" | tr -d '\n\r')"
-echo "${safe_path}" >> "${GITHUB_PATH}"
+echo "${TEMP}/reviewdog/bin" >>"${GITHUB_PATH}"

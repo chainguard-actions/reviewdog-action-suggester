@@ -1,0 +1,69 @@
+name: reviewdog
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  shellcheck:
+    name: runner / shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: haya14busa/action-cond@94f77f7a80cd666cb3155084e428254fea4281fd # v1.2.1
+        id: reporter
+        with:
+          cond: ${{ github.event_name == 'pull_request' }}
+          if_true: "github-pr-review"
+          if_false: "github-check"
+      - uses: reviewdog/action-shellcheck@1bb9751763fdfbee4b5043772c37374f103bff9e # v1.31.0
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: ${{ steps.reporter.outputs.value }}
+          level: warning
+
+  shfmt:
+    name: runner / shfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: reviewdog/action-shfmt@d8f080930b9be5847b4f97e9f4122b81a82aaeac # v1.0.4
+
+  actionlint:
+    name: runner / actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: reviewdog/action-actionlint@e37e2ca68a70112d21e135229272da28ce2d0d5a # v1.66.1
+        with:
+          reporter: github-check
+          level: warning
+
+  misspell:
+    name: runner / misspell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: reviewdog/action-misspell@9daa94af4357dddb6fd3775de806bc0a8e98d3e4 # v1.26.3
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-check
+          level: warning
+          locale: "US"
+
+  alex:
+    name: runner / alex
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: reviewdog/action-alex@6083b8ca333981fa617c6828c5d8fb21b13d916b # v1.16.0
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-check
+          level: warning

@@ -12,11 +12,15 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
-# Split INPUT_REVIEWDOG_FLAGS into an array using word splitting on whitespace only,
-# avoiding shell metacharacter injection from caller-controlled input.
-reviewdog_flags_array=()
+# Build reviewdog_flags as a bash array to safely handle multiple flags.
+# IFS word-splitting is intentional here to split space-separated flags,
+# but glob expansion is disabled with 'set -f' to prevent injection.
+reviewdog_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  IFS=' ' read -ra reviewdog_flags_array <<< "${INPUT_REVIEWDOG_FLAGS}"
+  set -f  # disable glob expansion
+  # shellcheck disable=SC2206
+  IFS=' ' read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
+  set +f  # re-enable glob expansion
 fi
 
 reviewdog \
@@ -28,7 +32,7 @@ reviewdog \
   -fail-level="${INPUT_FAIL_LEVEL}" \
   -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
   -level="${INPUT_LEVEL}" \
-  "${reviewdog_flags_array[@]}" <"${TMPFILE}"
+  "${reviewdog_flags[@]}" <"${TMPFILE}"
 
 EXIT_CODE=$?
 

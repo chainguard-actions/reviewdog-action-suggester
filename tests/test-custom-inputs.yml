@@ -1,0 +1,65 @@
+name: Test custom inputs - tool_name, level, filter_mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user for stash operations
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Set up fake curl on PATH
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "my-custom-tool"
+          level: "error"
+          filter_mode: "added"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert reviewdog was called with correct tool_name
+        run: |
+          if [ ! -f /tmp/reviewdog-args.txt ]; then
+            echo "FAIL: reviewdog was not called (args file not found)"
+            exit 1
+          fi
+          ARGS=$(cat /tmp/reviewdog-args.txt)
+          echo "reviewdog args: $ARGS"
+          if ! echo "$ARGS" | grep -q "my-custom-tool"; then
+            echo "FAIL: expected tool_name 'my-custom-tool' in reviewdog args"
+            exit 1
+          fi
+          echo "PASS: tool_name correctly passed to reviewdog"
+
+      - name: Assert reviewdog was called with correct level
+        run: |
+          ARGS=$(cat /tmp/reviewdog-args.txt)
+          echo "reviewdog args: $ARGS"
+          if ! echo "$ARGS" | grep -q "\-level=error"; then
+            echo "FAIL: expected level 'error' in reviewdog args"
+            exit 1
+          fi
+          echo "PASS: level correctly passed to reviewdog"
+
+      - name: Assert reviewdog was called with correct filter_mode
+        run: |
+          ARGS=$(cat /tmp/reviewdog-args.txt)
+          echo "reviewdog args: $ARGS"
+          if ! echo "$ARGS" | grep -q "\-filter-mode=added"; then
+            echo "FAIL: expected filter_mode 'added' in reviewdog args"
+            exit 1
+          fi
+          echo "PASS: filter_mode correctly passed to reviewdog"
