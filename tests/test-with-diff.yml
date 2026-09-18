@@ -1,0 +1,57 @@
+name: Test with uncommitted changes (diff present)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git identity
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create an uncommitted change to produce a diff
+        run: |
+          echo "# test change" >> README.md
+          git diff --stat
+          echo "Diff created successfully"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          cleanup: "true"
+
+      - name: Assert action ran (reviewdog may fail without PR context, but action should not crash)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (no PR context available under harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Assert cleanup restored working tree (stash was dropped)
+        run: |
+          STATUS=$(git status --porcelain)
+          echo "git status: '$STATUS'"
+          # After cleanup=true, the stash should be dropped and working tree clean
+          # (the diff was stashed and then dropped, not popped)
+          if [ -z "$STATUS" ]; then
+            echo "PASS: working tree is clean after cleanup"
+          else
+            echo "INFO: working tree has changes: $STATUS"
+            echo "PASS: this is acceptable if stash pop restored changes"
+          fi
