@@ -16,12 +16,12 @@ Action **reviewdog--action-suggester/v1.26.1** was hardened automatically. 1 fin
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh, the variable `${INPUT_REVIEWDOG_FLAGS}` — which holds the caller-controlled `inputs.reviewdog_flags` value (set via `INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}` in action.yml) — is expanded **unquoted** inside the `reviewdog` shell command. The `# shellcheck disable=SC2086` comment explicitly acknowledges this unquoted expansion. An attacker can supply shell metacharacters (`;`, `|`, `&`, `$(...)`, backticks, etc.) in the `reviewdog_flags` input to inject arbitrary shell commands. The offending line is: `  ${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"`
+Rule (b) violation: The shell variable `${INPUT_REVIEWDOG_FLAGS}` is expanded **unquoted** inside the `reviewdog` command in `script.sh` (line 22). This variable is populated from `inputs.reviewdog_flags` via the `env:` block in `action.yml`, making it fully attacker-controlled. An unquoted expansion allows the shell to parse metacharacters (`;`, `|`, `&`, `$(...)`, etc.) out of the value, enabling command injection. The `# shellcheck disable=SC2086` comment acknowledges the unquoted expansion but does not mitigate the security risk. Offending line: `  ${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"`
 
 Locations:
 
-- `script.sh:28`
-- `action.yml:62`
+- `script.sh:22`
+- `action.yml:57`
 
 ## Iteration Notes
 
@@ -31,5 +31,5 @@ Locations:
 
 **Notes:**
 
-Fixed shell injection vulnerability in script.sh at line 28. The unquoted `${INPUT_REVIEWDOG_FLAGS}` expansion (with `# shellcheck disable=SC2086`) was replaced with a safe xargs-based tokenization pattern that splits the flags input into a bash array. The array is then expanded as `"${reviewdog_flags[@]}"` to pass each flag as a separate, properly-quoted argument to reviewdog. This prevents shell metacharacters in the `reviewdog_flags` input from being interpreted as shell commands. The fix uses the guarded xargs pattern required for list-style inputs.
+Fixed unquoted ${INPUT_REVIEWDOG_FLAGS} expansion in script.sh (line 22). Changed shebang from #!/bin/sh to #!/bin/bash (the script is already sourced by bash per action.yml's shell: bash). Replaced the unquoted expansion with a guarded xargs-based tokenization into a bash array (reviewdog_flags), using the pattern: while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done < <(printf '%s' "${INPUT_REVIEWDOG_FLAGS}" | xargs printf '%s\0'). The reviewdog command now uses "${reviewdog_flags[@]}" to safely expand each flag as a separate quoted argument. Removed the # shellcheck disable=SC2086 comment that acknowledged but did not mitigate the injection risk.
 

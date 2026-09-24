@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 if [ -n "${GITHUB_WORKSPACE}" ]; then
@@ -16,9 +16,6 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
-# Safely tokenize INPUT_REVIEWDOG_FLAGS into an array to prevent shell injection.
-# xargs handles quoted strings and whitespace correctly, matching how the shell
-# would split an unquoted expansion, but without evaluating metacharacters.
 reviewdog_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
   while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done \
