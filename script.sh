@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 if [ -n "${GITHUB_WORKSPACE}" ]; then
@@ -12,6 +12,8 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
+# Safely tokenize INPUT_REVIEWDOG_FLAGS into an array using xargs (quote-aware splitting).
+# This prevents shell metacharacters in the input from being interpreted as commands.
 reviewdog_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
   while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done \

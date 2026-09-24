@@ -16,12 +16,16 @@ Action **reviewdog--action-suggester/v1.25.0** was hardened automatically. 1 fin
 
 ### script-injection (severity: high)
 
-Sub-rule (b) violation: In script.sh line 24, the shell variable `${INPUT_REVIEWDOG_FLAGS}` is expanded **unquoted** inside the `reviewdog` command invocation. This variable is populated from `inputs.reviewdog_flags` (a workflow-controllable value) via the `env:` block in action.yml. Because the expansion is unquoted, the shell performs word-splitting and glob expansion on the value, allowing an attacker to inject arbitrary shell metacharacters, extra flags, or command separators. The `# shellcheck disable=SC2086` comment confirms the author intentionally suppressed the shellcheck warning, but this does not mitigate the injection risk. The offending line is: `  ${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"`
+Rule (b) violation: In script.sh, the shell variable ${INPUT_REVIEWDOG_FLAGS} is expanded **unquoted** inside the `reviewdog` command invocation. This variable is populated from `${{ inputs.reviewdog_flags }}` (a caller-controlled input) via the `env:` block in action.yml. An unquoted expansion allows the shell to parse metacharacters (`;`, `|`, `&`, `$(...)`, backticks, glob chars, whitespace) out of the value, enabling command injection. The offending line is:
+
+  `${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"  # INPUT_REVIEWDOG_FLAGS is intentionally split...`
+
+Even though the comment notes intentional word-splitting for flag passing, this pattern allows an attacker supplying a crafted `reviewdog_flags` input to execute arbitrary shell commands. The fix is to use an array or a safer quoting strategy, e.g. using `read -ra` to split the flags safely.
 
 Locations:
 
-- `script.sh:24`
-- `action.yml:68`
+- `script.sh:16`
+- `action.yml:64`
 
 ## Iteration Notes
 
@@ -31,5 +35,5 @@ Locations:
 
 **Notes:**
 
-Fixed script.sh line 24: replaced unquoted `${INPUT_REVIEWDOG_FLAGS}` expansion with a safe xargs-based tokenization into a bash array. The `reviewdog_flags` array is populated using `printf '%s' "$INPUT_REVIEWDOG_FLAGS" | xargs printf '%s\0'` with a NUL-delimited read loop (guarded by a non-empty check to avoid xargs running on empty input). The array is then expanded as `"${reviewdog_flags[@]}"` in the reviewdog invocation, preventing word-splitting, glob expansion, and shell metacharacter injection. The script is sourced in bash (action.yml uses `shell: bash`), so bash array syntax is valid despite the `#!/bin/sh` shebang.
+Fixed unquoted ${INPUT_REVIEWDOG_FLAGS} expansion in script.sh (line 16). Changed shebang from #!/bin/sh to #!/bin/bash (safe: the script is sourced from a 'shell: bash' step in action.yml). Replaced the unquoted expansion with xargs-based quote-aware tokenization into a bash array: the guard 'if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]' prevents empty-input issues, 'printf "%s" | xargs printf "%s\0"' tokenizes the flags respecting quotes without evaluating shell metacharacters, and the null-delimited read loop populates the array. The reviewdog command then uses '"${reviewdog_flags[@]}"' for safe array expansion. The stdin redirection '< "${TMPFILE}"' is preserved on the reviewdog command itself (not on xargs), so reviewdog's stdin is not stolen.
 
