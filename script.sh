@@ -12,11 +12,10 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
-# Split INPUT_REVIEWDOG_FLAGS into an array using read -ra to safely handle
-# multiple flags without unquoted expansion that could allow shell injection.
-REVIEWDOG_FLAGS_ARRAY=()
+reviewdog_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  read -ra REVIEWDOG_FLAGS_ARRAY <<< "${INPUT_REVIEWDOG_FLAGS}"
+  while IFS= read -r -d '' t; do reviewdog_flags+=("$t"); done \
+    < <(printf '%s' "${INPUT_REVIEWDOG_FLAGS}" | xargs printf '%s\0')
 fi
 
 reviewdog \
@@ -28,7 +27,7 @@ reviewdog \
   -fail-level="${INPUT_FAIL_LEVEL}" \
   -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
   -level="${INPUT_LEVEL}" \
-  "${REVIEWDOG_FLAGS_ARRAY[@]+"${REVIEWDOG_FLAGS_ARRAY[@]}"}" <"${TMPFILE}"
+  "${reviewdog_flags[@]}" <"${TMPFILE}"
 
 EXIT_CODE=$?
 

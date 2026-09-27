@@ -10,40 +10,26 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-suggester/v1.24.3** was hardened automatically. 1 finding(s) were identified and resolved across 2 iteration(s).
+Action **reviewdog--action-suggester/v1.24.3** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
-### missing-permissions (severity: medium)
+### script-injection (severity: high)
 
-Workflow file has no top-level `permissions:` key and no job-level `permissions:` key on any job. Without explicit permissions, the GITHUB_TOKEN is granted its default (often broad) permissions, which violates least-privilege principles.
+Sub-rule (b): In script.sh, the variable `${INPUT_REVIEWDOG_FLAGS}` is expanded unquoted on line 22 of the reviewdog invocation. This variable holds the value of `${{ inputs.reviewdog_flags }}` (a workflow-controllable input set via the env: block in action.yml). An unquoted shell expansion allows an attacker to inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) through the `reviewdog_flags` input, enabling arbitrary command execution. The intentional `# shellcheck disable=SC2086` comment confirms the unquoted expansion is deliberate, but it does not mitigate the injection risk. Offending line: `  ${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"`
 
 Locations:
 
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
+- `script.sh:22`
+- `action.yml:62`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** missing-permissions
-
-**Notes:**
-
-Added top-level `permissions:` blocks to all four workflow files with minimal required permissions:
-- depup.yml: `contents: write, pull-requests: write` (depup action creates PRs for dependency updates)
-- release.yml: `contents: write, pull-requests: write` (creates GitHub releases, manages semver tags, posts bumpr status comments)
-- reviewdog.yml: `contents: read, checks: write, pull-requests: write` (posts check annotations and PR review comments via reviewdog actions)
-- test.yml: `contents: read, pull-requests: write` (action-suggester posts PR review suggestions)
-
-### Iteration 2
-
 **Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed script-injection vulnerability in hardened/action/script.sh line 24. Changed shebang from #!/bin/sh to #!/bin/bash to enable array support. Replaced the unquoted ${INPUT_REVIEWDOG_FLAGS} expansion (which allowed shell metacharacter injection via semicolons, pipes, backticks, etc.) with a bash array: `read -ra REVIEWDOG_FLAGS_ARRAY <<< "${INPUT_REVIEWDOG_FLAGS}"` followed by `"${REVIEWDOG_FLAGS_ARRAY[@]+"${REVIEWDOG_FLAGS_ARRAY[@]}"}"`. This splits flags on whitespace only (not shell metacharacters), preserving the multi-flag functionality while preventing injection. The array expansion form drops out entirely when the input is empty, avoiding an empty-argument issue.
+Fixed script-injection vulnerability in script.sh line 22: replaced the unquoted `${INPUT_REVIEWDOG_FLAGS}` expansion (with shellcheck disable comment) with a safe xargs-based tokenization into a bash array. The fix: (1) changed shebang from #!/bin/sh to #!/bin/bash (safe since the script is sourced via `shell: bash` in action.yml), (2) added a guarded xargs tokenization loop that splits INPUT_REVIEWDOG_FLAGS into a bash array using null-delimited reads (handles quoted arguments correctly), (3) expanded the array as `"${reviewdog_flags[@]}"` to pass each flag as a separate, properly-quoted argument. The reviewdog command reads from a file redirect `< "${TMPFILE}"` rather than stdin, so the xargs pipeline does not interfere with reviewdog's input.
 
