@@ -10,37 +10,31 @@
 
 **Harden Agent Version:** `2`
 
-Action **reviewdog--action-suggester/v1.24.0** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **reviewdog--action-suggester/v1.24.0** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (b) violation: In script.sh (sourced by action.yml's composite run step), the variable `${INPUT_REVIEWDOG_FLAGS}` is expanded unquoted in the shell command. This variable is set from `inputs.reviewdog_flags` (a workflow-controllable value via the `env:` block in action.yml). An attacker-controlled value containing shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) will be parsed by the shell, enabling command injection. The comment acknowledges intentional word-splitting, but this does not mitigate the injection risk.
+Rule (b) violation: In script.sh, the variable ${INPUT_REVIEWDOG_FLAGS} is expanded **unquoted** inside the reviewdog command. This env var is populated from `${{ inputs.reviewdog_flags }}` (an attacker-controlled input) via the `env:` block in action.yml. Because the expansion is unquoted, the shell will word-split and interpret any metacharacters (`;`, `|`, `&`, `$(...)`, etc.) in the value, enabling command injection. The comment "INPUT_REVIEWDOG_FLAGS is intentionally split" explains the word-splitting intent but does not mitigate the injection risk. The offending line is:
+
+```sh
+  ${INPUT_REVIEWDOG_FLAGS} <"${TMPFILE}"
+```
+
+A safe alternative that still allows flag splitting would be to use an array: `read -ra extra_flags <<< "${INPUT_REVIEWDOG_FLAGS}"` and then pass `"${extra_flags[@]}"`.
 
 Locations:
 
 - `script.sh:19`
-- `action.yml:57`
-
-### missing-permissions (severity: medium)
-
-None of the workflow files define a top-level `permissions:` key, and no job within them defines job-level `permissions:` either. Without explicit permissions, workflows run with the default (potentially broad) token permissions, violating the principle of least privilege.
-
-Locations:
-
-- `.github/workflows/depup.yml:1`
-- `.github/workflows/release.yml:1`
-- `.github/workflows/reviewdog.yml:1`
-- `.github/workflows/test.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, missing-permissions
+**Fixes applied:** script-injection
 
 **Notes:**
 
-1. script-injection (script.sh line 19): Replaced the unquoted `${INPUT_REVIEWDOG_FLAGS}` expansion with a bash array. The flags string is split safely using `xargs printf '%s\0'` into null-delimited tokens collected into a `reviewdog_flags` array, then expanded as `"${reviewdog_flags[@]}"`. This prevents shell metacharacter injection while still supporting multiple space-separated flags. Updated shebang from `#!/bin/sh` to `#!/bin/bash` since bash arrays and process substitution are used. 2. missing-permissions: Added top-level `permissions:` blocks to all four workflow files — depup.yml (contents:write, pull-requests:write), release.yml (contents:write, pull-requests:write), reviewdog.yml (contents:read, checks:write, pull-requests:write), and test.yml (contents:read, pull-requests:write) — granting only the minimum permissions each workflow requires.
+Fixed script-injection in hardened/action/script.sh: replaced the unquoted ${INPUT_REVIEWDOG_FLAGS} expansion with a safe xargs-based tokenization into a bash array. The INPUT_REVIEWDOG_FLAGS value is now tokenized (quote-aware, via xargs) into an 'extra_flags' array, which is then passed to reviewdog as "${extra_flags[@]}". This prevents shell metacharacters from being interpreted as commands while still allowing multiple flags. The xargs pipeline runs separately from the reviewdog invocation, so reviewdog's stdin redirect (< "${TMPFILE}") is unaffected. Bash array syntax is valid here because the script is sourced from a 'shell: bash' step in action.yml.
 

@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -e
 
 if [ -n "${GITHUB_WORKSPACE}" ]; then
   cd "${GITHUB_WORKSPACE}" || exit
@@ -12,13 +12,10 @@ git diff >"${TMPFILE}"
 
 git stash -u
 
-# Build reviewdog_flags as an array to safely handle multiple flags
-# without allowing shell metacharacter injection
-reviewdog_flags=()
+extra_flags=()
 if [ -n "${INPUT_REVIEWDOG_FLAGS}" ]; then
-  while IFS= read -r -d '' flag; do
-    reviewdog_flags+=("$flag")
-  done < <(xargs printf '%s\0' <<<"${INPUT_REVIEWDOG_FLAGS}")
+  while IFS= read -r -d '' t; do extra_flags+=("$t"); done \
+    < <(printf '%s' "${INPUT_REVIEWDOG_FLAGS}" | xargs printf '%s\0')
 fi
 
 reviewdog \
@@ -30,7 +27,7 @@ reviewdog \
   -fail-level="${INPUT_FAIL_LEVEL}" \
   -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
   -level="${INPUT_LEVEL}" \
-  "${reviewdog_flags[@]}" <"${TMPFILE}"
+  "${extra_flags[@]}" <"${TMPFILE}"
 
 EXIT_CODE=$?
 
