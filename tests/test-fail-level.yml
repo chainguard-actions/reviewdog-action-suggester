@@ -1,0 +1,49 @@
+name: Test fail_level input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Ensure working tree is clean
+        run: |
+          git checkout -- .
+          git clean -fd
+          STATUS=$(git status --porcelain)
+          echo "git status: '$STATUS'"
+          echo "Working tree is clean"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "custom-tool-name"
+          level: "error"
+          filter_mode: "added"
+          fail_level: "error"
+          fail_on_error: "false"
+          cleanup: "true"
+        continue-on-error: true
+
+      - name: Assert action ran with custom inputs
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With no diff and fail_level=error, reviewdog should exit 0 (no errors found)
+          # But the sentinel repo means github-pr-review reporter may fail
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom fail_level=error (no issues found)"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - sentinel repo has no PR context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

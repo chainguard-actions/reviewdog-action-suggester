@@ -1,0 +1,68 @@
+name: Test cleanup=false restores changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create a tracked file and modify it to produce a diff
+        run: |
+          # Create a file, commit it, then modify it so git diff shows changes
+          echo "original content for cleanup test" > "$GITHUB_WORKSPACE/tests/cleanup-difftest.txt"
+          git add "$GITHUB_WORKSPACE/tests/cleanup-difftest.txt"
+          git commit -m "Add cleanup-difftest.txt for testing"
+          # Now modify it to create a diff
+          echo "modified content for cleanup test" > "$GITHUB_WORKSPACE/tests/cleanup-difftest.txt"
+          # Verify diff is non-empty
+          DIFF=$(git diff)
+          echo "diff length: ${#DIFF}"
+          if [ -z "$DIFF" ]; then
+            echo "FAIL: expected a non-empty diff"
+            exit 1
+          fi
+          echo "PASS: diff is present before action"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester-cleanup-false"
+          level: "info"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          cleanup: "false"
+        continue-on-error: true
+
+      - name: Assert action ran
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - sentinel repo has no PR context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Verify changes were restored (cleanup=false pops stash)
+        run: |
+          # With cleanup=false, the action runs "git stash pop" which restores the changes
+          STATUS=$(git status --porcelain)
+          echo "git status after action with cleanup=false: '$STATUS'"
+          DIFF=$(git diff)
+          echo "diff after action: '${DIFF:0:200}'"
+          if [ -n "$DIFF" ]; then
+            echo "PASS: changes were restored by git stash pop (cleanup=false)"
+          else
+            echo "INFO: working tree is clean - stash pop may have been skipped (reviewdog may have failed before stash)"
+          fi

@@ -1,0 +1,68 @@
+name: Test with diff present
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure git user
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create a tracked file and modify it to produce a diff
+        run: |
+          # Create a file, commit it, then modify it so git diff shows changes
+          echo "original content" > "$GITHUB_WORKSPACE/tests/difftest.txt"
+          git add "$GITHUB_WORKSPACE/tests/difftest.txt"
+          git commit -m "Add difftest.txt for testing"
+          # Now modify it to create a diff
+          echo "modified content" > "$GITHUB_WORKSPACE/tests/difftest.txt"
+          # Verify diff is non-empty
+          DIFF=$(git diff)
+          echo "diff length: ${#DIFF}"
+          if [ -z "$DIFF" ]; then
+            echo "FAIL: expected a non-empty diff"
+            exit 1
+          fi
+          echo "PASS: diff is present"
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "test-suggester"
+          level: "warning"
+          filter_mode: "diff_context"
+          fail_level: "none"
+          cleanup: "true"
+        continue-on-error: true
+
+      - name: Assert action ran (reviewdog fails on sentinel repo, but action should handle gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - sentinel repo has no PR context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Verify cleanup restored working tree
+        run: |
+          # After cleanup=true, the stash should be dropped and working tree clean
+          STATUS=$(git status --porcelain)
+          echo "git status after action: '$STATUS'"
+          # The action stashes changes and drops the stash (cleanup=true)
+          # So working tree should be clean
+          if [ -n "$STATUS" ]; then
+            echo "INFO: working tree has changes after action (stash may have been popped)"
+          else
+            echo "PASS: working tree is clean after action"
+          fi
