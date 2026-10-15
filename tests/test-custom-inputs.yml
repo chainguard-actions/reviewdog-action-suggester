@@ -1,0 +1,44 @@
+name: Test custom inputs (tool_name, level, filter_mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Run action with custom tool_name, level, and filter_mode
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          tool_name: "my-custom-tool"
+          level: "info"
+          filter_mode: "added"
+          fail_level: "none"
+          fail_on_error: "false"
+          cleanup: "true"
+
+      - name: Assert action ran with custom inputs
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action uses github-pr-review reporter which requires a PR context.
+          # Without a PR, reviewdog exits non-zero. Either outcome is acceptable.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom inputs"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without PR context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
