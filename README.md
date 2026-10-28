@@ -6,21 +6,21 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 ## Versions
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v1 | [`v1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) |
-| v1.22 | [`v1.22`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) |
-| v1.22.0 | [`v1.22.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22.0) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) |
-| v1.23 | [`v1.23`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.23) | [`130e59f`](https://github.com/reviewdog/action-suggester/commit/130e59f2fa3ec43a448d2c3d3a6fdc66883c6ebc) |
-| v1.23.1 | [`v1.23.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.23.1) | [`130e59f`](https://github.com/reviewdog/action-suggester/commit/130e59f2fa3ec43a448d2c3d3a6fdc66883c6ebc) |
-| v1.24 | [`v1.24`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) |
-| v1.24.0 | [`v1.24.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24.0) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) |
-| v1.24.3 | [`v1.24.3`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24.3) | [`2558ba1`](https://github.com/reviewdog/action-suggester/commit/2558ba17e65a9039e73764a73009fc05fef28a46) |
-| v1.25.0 | [`v1.25.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.25.0) | [`4553543`](https://github.com/reviewdog/action-suggester/commit/4553543bea739d9d503379d786148cfd561de5fa) |
-| v1.26.0 | [`v1.26.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.0) | [`9d84de0`](https://github.com/reviewdog/action-suggester/commit/9d84de0d37e5b9e8de5ddec1e63ac29ef0026991) |
-| v1.26.1 | [`v1.26.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.1) | [`c387862`](https://github.com/reviewdog/action-suggester/commit/c387862ad6765a9729f2b40ee4d8b5769f2145c7) |
-| v1.26.2 | [`v1.26.2`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.2) | [`8219e3d`](https://github.com/reviewdog/action-suggester/commit/8219e3d2e54a63ddecf1318659aa541bd1fa7202) |
-| v1.26.3 | [`v1.26.3`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.3) | [`ac5ce6d`](https://github.com/reviewdog/action-suggester/commit/ac5ce6d94e35c00530447dc63c271e38e4fd36c6) |
+| Version | Tag | Upstream commit | Hardening report |
+|---------|-----|-----------------|------------------|
+| v1 | [`v1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) | — |
+| v1.22 | [`v1.22`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) | — |
+| v1.22.0 | [`v1.22.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.22.0) | [`3d5391d`](https://github.com/reviewdog/action-suggester/commit/3d5391db5affb50a46eb4629e908a4e2c5dd20b2) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.22.0/HARDENING.md) |
+| v1.23 | [`v1.23`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.23) | [`130e59f`](https://github.com/reviewdog/action-suggester/commit/130e59f2fa3ec43a448d2c3d3a6fdc66883c6ebc) | — |
+| v1.23.1 | [`v1.23.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.23.1) | [`130e59f`](https://github.com/reviewdog/action-suggester/commit/130e59f2fa3ec43a448d2c3d3a6fdc66883c6ebc) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.23.1/HARDENING.md) |
+| v1.24 | [`v1.24`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) | — |
+| v1.24.0 | [`v1.24.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24.0) | [`aa38384`](https://github.com/reviewdog/action-suggester/commit/aa38384ceb608d00f84b4690cacc83a5aba307ff) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.24.0/HARDENING.md) |
+| v1.24.3 | [`v1.24.3`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.24.3) | [`2558ba1`](https://github.com/reviewdog/action-suggester/commit/2558ba17e65a9039e73764a73009fc05fef28a46) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.24.3/HARDENING.md) |
+| v1.25.0 | [`v1.25.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.25.0) | [`4553543`](https://github.com/reviewdog/action-suggester/commit/4553543bea739d9d503379d786148cfd561de5fa) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.25.0/HARDENING.md) |
+| v1.26.0 | [`v1.26.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.0) | [`9d84de0`](https://github.com/reviewdog/action-suggester/commit/9d84de0d37e5b9e8de5ddec1e63ac29ef0026991) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.0/HARDENING.md) |
+| v1.26.1 | [`v1.26.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.1) | [`c387862`](https://github.com/reviewdog/action-suggester/commit/c387862ad6765a9729f2b40ee4d8b5769f2145c7) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.1/HARDENING.md) |
+| v1.26.2 | [`v1.26.2`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.2) | [`8219e3d`](https://github.com/reviewdog/action-suggester/commit/8219e3d2e54a63ddecf1318659aa541bd1fa7202) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.2/HARDENING.md) |
+| v1.26.3 | [`v1.26.3`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.3) | [`ac5ce6d`](https://github.com/reviewdog/action-suggester/commit/ac5ce6d94e35c00530447dc63c271e38e4fd36c6) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.3/HARDENING.md) |
 
 ## Privacy
 
