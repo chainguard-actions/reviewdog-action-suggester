@@ -1,5 +1,5 @@
 name: "reviewdog-suggester: Suggest any code changes based on diff with reviewdog"
-description: "\U0001F436 Suggest any code changes based on diff through GitHub Multi-line code suggestions"
+description: "🐶 Suggest any code changes based on diff through GitHub Multi-line code suggestions"
 author: "haya14busa"
 inputs:
   github_token:
@@ -87,6 +87,7 @@ runs:
         INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}
         INPUT_CLEANUP: ${{ inputs.cleanup }}
         INPUT_PATH: ${{ inputs.path }}
+
 # Ref: https://haya14busa.github.io/github-action-brandings/
 branding:
   icon: "edit"
