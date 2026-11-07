@@ -1,0 +1,31 @@
+name: Test clean tree with no diff
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+          git checkout -- tests/fixtures/sample.txt || true
+      - id: action
+        uses: .
+        with:
+          cleanup: "false"
+      - name: Assert action succeeded and fixture unchanged
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if ! git diff --quiet -- tests/fixtures/sample.txt; then
+            echo "FAIL: fixture should be unchanged"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,37 @@
+name: Test custom path and reviewdog inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and modify a tracked file
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+          sed -i 's/line two/line 2/' tests/fixtures/sample.txt
+          grep -q "line 2" tests/fixtures/sample.txt
+      - id: action
+        uses: .
+        with:
+          path: tests/fixtures
+          tool_name: my-suggester
+          level: error
+          filter_mode: added
+          fail_level: none
+      - name: Assert success and cleanup within custom path
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          cat tests/fixtures/sample.txt
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if ! grep -q "line two" tests/fixtures/sample.txt; then
+            echo "FAIL: modification should have been cleaned up"
+            exit 1
+          fi
+          echo "PASS"

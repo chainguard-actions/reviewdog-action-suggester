@@ -1,0 +1,35 @@
+name: Test cleanup false restores changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and modify a tracked file
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+          echo "suggested change" >> tests/fixtures/sample.txt
+      - id: action
+        uses: .
+        with:
+          cleanup: "false"
+      - name: Assert changes were restored after the action
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          cat tests/fixtures/sample.txt
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if ! grep -q "suggested change" tests/fixtures/sample.txt; then
+            echo "FAIL: modification should have been restored (cleanup=false)"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Revert fixture
+        if: always()
+        run: git checkout -- tests/fixtures/sample.txt || true

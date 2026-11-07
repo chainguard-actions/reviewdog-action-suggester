@@ -1,0 +1,44 @@
+name: Test basic usage with default cleanup
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and modify a tracked file
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test User"
+          test -f tests/fixtures/sample.txt || { echo "FAIL: fixture missing"; exit 1; }
+          echo "line four added" >> tests/fixtures/sample.txt
+          git diff --stat
+          if git diff --quiet; then
+            echo "FAIL: expected a working-tree diff before running the action"
+            exit 1
+          fi
+      - id: action
+        uses: .
+      - name: Assert action succeeded and changes were cleaned up
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if grep -q "line four added" tests/fixtures/sample.txt; then
+            echo "FAIL: modification should have been cleaned up"
+            exit 1
+          fi
+          if ! git diff --quiet -- tests/fixtures/sample.txt; then
+            echo "FAIL: fixture still differs from HEAD"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert reviewdog is installed
+        run: |
+          command -v reviewdog || { echo "FAIL: reviewdog not on PATH"; exit 1; }
+          reviewdog -version
+          echo "PASS"
