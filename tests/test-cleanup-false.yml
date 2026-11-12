@@ -1,0 +1,45 @@
+name: Test cleanup false restores changes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and make local changes
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          echo "suggested change line" >> README.md
+          echo "brand new untracked" > untracked-suggester-file.txt
+      - id: action
+        uses: .
+        with:
+          cleanup: "false"
+      - name: Assert action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert changes were restored
+        run: |
+          git status --short
+          if ! grep -q "suggested change line" README.md; then
+            echo "FAIL: README.md change was not restored"
+            exit 1
+          fi
+          if [ ! -f untracked-suggester-file.txt ]; then
+            echo "FAIL: untracked file was not restored"
+            exit 1
+          fi
+          if [ -n "$(git stash list)" ]; then
+            echo "FAIL: stash should be empty after pop"
+            git stash list
+            exit 1
+          fi
+          echo "PASS"

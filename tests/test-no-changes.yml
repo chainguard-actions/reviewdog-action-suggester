@@ -1,0 +1,36 @@
+name: Test with clean working tree
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and record HEAD
+        id: before
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git diff --quiet || { echo "FAIL: tree not clean before test"; exit 1; }
+      - id: action
+        uses: .
+      - name: Assert action succeeded and tree untouched
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          HEAD_BEFORE: ${{ steps.before.outputs.head }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD)" != "$HEAD_BEFORE" ]; then
+            echo "FAIL: HEAD changed"
+            exit 1
+          fi
+          if ! git diff --quiet; then
+            echo "FAIL: unexpected diff"
+            exit 1
+          fi
+          echo "PASS"

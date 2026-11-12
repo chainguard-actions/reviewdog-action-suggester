@@ -1,0 +1,35 @@
+name: Test custom reviewdog flags
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and make local changes
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          echo "another suggestion" >> README.md
+      - id: action
+        uses: .
+        with:
+          tool_name: custom-suggester
+          level: error
+          filter_mode: added
+          fail_level: error
+          reviewdog_flags: "-tee"
+      - name: Assert action succeeded (non-PR build exits 0) and cleaned up
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if grep -q "another suggestion" README.md; then
+            echo "FAIL: change should have been cleaned up"
+            exit 1
+          fi
+          echo "PASS"

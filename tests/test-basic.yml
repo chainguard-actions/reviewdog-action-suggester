@@ -1,0 +1,53 @@
+name: Test basic usage (cleanup discards changes)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure git and make local changes
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          echo "suggested change line" >> README.md
+          echo "brand new untracked" > untracked-suggester-file.txt
+          git status --short
+          if git diff --quiet; then
+            echo "FAIL: setup did not produce a diff"
+            exit 1
+          fi
+      - id: action
+        uses: .
+      - name: Assert action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert reviewdog installed
+        run: |
+          command -v reviewdog || { echo "FAIL: reviewdog not on PATH"; exit 1; }
+          reviewdog -version
+          echo "PASS"
+      - name: Assert changes were cleaned up
+        run: |
+          git status --short
+          if ! git diff --quiet; then
+            echo "FAIL: tracked changes still present after cleanup"
+            git diff
+            exit 1
+          fi
+          if [ -e untracked-suggester-file.txt ]; then
+            echo "FAIL: untracked file still present after cleanup"
+            exit 1
+          fi
+          if grep -q "suggested change line" README.md; then
+            echo "FAIL: README.md still contains change"
+            exit 1
+          fi
+          echo "PASS"
