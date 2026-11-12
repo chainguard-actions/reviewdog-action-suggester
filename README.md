@@ -22,6 +22,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.26.2 | [`v1.26.2`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.2) | [`8219e3d`](https://github.com/reviewdog/action-suggester/commit/8219e3d2e54a63ddecf1318659aa541bd1fa7202) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.2/HARDENING.md) |
 | v1.26.3 | [`v1.26.3`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.26.3) | [`ac5ce6d`](https://github.com/reviewdog/action-suggester/commit/ac5ce6d94e35c00530447dc63c271e38e4fd36c6) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.26.3/HARDENING.md) |
 | v1.27.0 | [`v1.27.0`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.27.0) | [`295fd4e`](https://github.com/reviewdog/action-suggester/commit/295fd4e5482381f33925c46ca5c2f66c69370267) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.27.0/HARDENING.md) |
+| v1.27.1 | [`v1.27.1`](https://github.com/chainguard-actions/reviewdog-action-suggester/tree/v1.27.1) | [`fd22a83`](https://github.com/reviewdog/action-suggester/commit/fd22a83b1ebc13fd8aee5d57b06793fce6f20fb9) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-suggester/blob/v1.27.1/HARDENING.md) |
 
 ## Privacy
 
